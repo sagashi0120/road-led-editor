@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ja">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width,initial-scale=1.0">
+		<title>情報板エディター</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+		<style>
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+
+			body {
+				font-family: "DotGothic16",monospace;
+				min-height: 100vh;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				padding: 2rem 1rem;
+				gap: 2rem;
+			}
+
+			h1 {
+				font-size: 1.2rem;
+				color: #066d23;
+				letter-spacing: 0.1em;
+			}
+
+			.board-wrap {
+				width: 100%;
+				max-width: 500px !important;
+			}
+
+			.image-stack {
+				display: grid;
+				width: 100%;
+			}
+
+			.image-stack > * {
+				grid-row: 1;
+				grid-column: 1;
+			}
+
+			.background {
+				width: 100%;
+				height: 100%;
+				object-fit: cover;
+			}
+
+			.foreground,.foreground2 {
+				width: 100%;
+				height: 100%;
+				animation: blink 0.6s steps(1) infinite;
+				visibility: hidden;
+			}
+
+			@keyframes blink {
+				0%,100% { opacity: 1; }
+				50% { opacity: 0; }
+			}
+
+			.icon-overlay {
+				align-self: center;
+				justify-self: start;
+				margin-left: 4%;
+				margin-top: -9.5%;
+				z-index: 2;
+				width: 26%;
+				height: auto;
+				image-rendering: pixelated;
+			}
+
+			.text-overlay,
+			.text-overlay-2 {
+				justify-self: center;
+				pointer-events: none;
+				color: white;
+				z-index: 2;
+				font-family: "DotGothic16",monospace;
+				white-space: nowrap;
+				transform-origin: center center;
+			}
+
+			.text-overlay {
+				align-self: start;
+				margin-top: 4.5%;
+			}
+
+			.text-overlay-2 {
+				align-self: start;
+				margin-top: 25%;
+			}
+
+			.text-overlay *,
+			.text-overlay-2 * {
+				font-family: inherit;
+			}
+
+			.editor {
+				width: 100%;
+				max-width: 500px;
+				background: #16551e;
+				border-radius: 15px;
+				padding: 1.2rem;
+				display: flex;
+				flex-direction: column;
+				gap: 1.2rem;
+			}
+
+			.editor-section {
+				display: flex;
+				flex-direction: column;
+				gap: 0.5rem;
+			}
+
+			.editor-section label {
+				font-size: 0.75rem;
+				color: #e6c84a;
+				letter-spacing: 0.08em;
+			}
+
+			.editor-section input[type="text"] {
+				background: #ffffff;
+				border: 1px solid #2a5c40;
+				border-radius: 15px;
+				font-family: "DotGothic16",monospace;
+				font-size: 1rem;
+				padding: 0.4rem 0.6rem;
+				width: 100%;
+				outline: none;
+				transition: border-color 0.2s;
+			}
+
+			.editor-section input[type="text"]:focus {
+				border-color: #4acce6;
+			}
+
+			.char-count {
+				font-size: 0.7rem;
+				color: #888;
+				text-align: right;
+			}
+
+			.char-count.over {
+				color: #e24b4a;
+			}
+
+			.icon-grid {
+				display: grid;
+				grid-template-columns: repeat(4,1fr);
+				gap: 6px;
+			}
+
+			.icon-btn {
+				background: #0f603a;
+				border: 1px solid #2a5c3e;
+				border-radius: 15px;
+				color: #aaa;
+				cursor: pointer;
+				font-family: "DotGothic16",monospace;
+				font-size: 0.65rem;
+				padding: 6px 4px;
+				text-align: center;
+				transition: border-color 0.15s,color 0.15s;
+			}
+
+			.icon-btn:hover {
+				border-color: #888;
+				color: #ddd;
+			}
+
+			.icon-btn.selected {
+				border-color: #4ad1e6;
+				color: #16d3fd;
+			}
+
+			.icon-btn .icon-img {
+				width: 32px;
+				height: auto;
+				display: block;
+				margin: 0 auto 3px;
+				image-rendering: pixelated;
+			}
+
+			.icon-btn .icon-emoji {
+				font-size: 24px;
+				display: block;
+				margin-bottom: 2px;
+			}
+
+			.check-row {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				font-size: 0.8rem;
+				color: #aaa;
+				cursor: pointer;
+			}
+
+			.check-row input {
+				accent-color: #e6c84a;
+				width: 15px;
+				height: 15px;
+				cursor: pointer;
+			}
+
+			.code-box {
+				background: #0a1a13;
+				border: 1px solid #2a5c3a;
+				border-radius: 15px;
+				padding: 0.8rem;
+				font-size: 0.7rem;
+				color: #7ec8e3;
+				overflow-x: auto;
+				white-space: pre;
+				line-height: 1.6;
+			}
+
+			#applyColorBtn {
+				background: #0f6025;
+				border: 1px solid #2a5c46;
+				color: #e6c84a;
+				padding: 4px 12px;
+				border-radius: 15px;
+				cursor: pointer;
+			}
+
+			#applyColorBtn:hover {
+				background-color: #066d23;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>情報板エディター</h1>
+		<div class="board-wrap">
+			<div class="image-stack" id="imageStack">
+				<img src="img/C2-info-1.svg" alt="背景" class="background" id="bgImg">
+				<img src="img/C2-info-2.svg" alt="前景" class="foreground">
+				<img src="img/C2-info-3.svg" alt="前景" class="foreground2">
+				<img src="" class="icon-overlay" id="iconImg" style="display:none;">
+				<div class="text-overlay" id="line1Display"></div>
+				<div class="text-overlay-2" id="line2Display"></div>
+			</div>
+		</div>
+		<div class="editor">
+			<div class="editor-section">
+				<label>アイコン</label>
+				<div class="icon-grid" id="iconGrid">
+					<button class="icon-btn selected" data-icon="none">
+						<span class="icon-emoji">✕</span>なし
+					</button>
+					<button class="icon-btn" data-icon="break">
+						<img class="icon-img" src="img/info/break.svg" alt="故障">故障
+					</button>
+					<button class="icon-btn" data-icon="clash">
+						<img class="icon-img" src="img/info/clash.svg" alt="事故">事故
+					</button>
+					<button class="icon-btn" data-icon="closed">
+						<img class="icon-img" src="img/info/closed.svg" alt="通行止">通行止
+					</button>
+					<button class="icon-btn" data-icon="construction">
+						<img class="icon-img" src="img/info/construction.svg" alt="工事">工事
+					</button>
+					<button class="icon-btn" data-icon="delay">
+						<img class="icon-img" src="img/info/delay.svg" alt="渋滞">渋滞
+					</button>
+					<button class="icon-btn" data-icon="luggage">
+						<img class="icon-img" src="img/info/luggage.svg" alt="落下物">落下物
+					</button>
+					<button class="icon-btn" data-icon="rain">
+						<img class="icon-img" src="img/info/rain.svg" alt="雨">雨
+					</button>
+					<button class="icon-btn" data-icon="snow">
+						<img class="icon-img" src="img/info/snow.svg" alt="雪">雪
+					</button>
+					<button class="icon-btn" data-icon="tire">
+						<img class="icon-img" src="img/info/tire.svg" alt="チェーン">チェーン
+					</button>
+					<button class="icon-btn" data-icon="wave">
+						<img class="icon-img" src="img/info/wave.svg" alt="高波">高波
+					</button>
+					<button class="icon-btn" data-icon="wind">
+						<img class="icon-img" src="img/info/wind.svg" alt="強風">強風
+					</button>
+					<button class="icon-btn" data-icon="work">
+						<img class="icon-img" src="img/info/work.svg" alt="作業中">作業中
+					</button>
+					<button class="icon-btn" data-icon="michimaru">
+						<img class="icon-img" src="img/info/michimaru.svg" alt="みちまるくん">みちまるくん
+					</button>
+					<button class="icon-btn" data-icon="nexco_c">
+						<img class="icon-img" src="img/info/nexco-c.svg" alt="NEXCO中日本">NEXCO中日本
+					</button>
+				</div>
+			</div>
+			<div class="editor-section">
+				<label>1行目（日本語9文字まで）</label>
+				<input type="text" id="line1Input" placeholder="例: 武石～[color=#e24b4a]船橋[/color]" maxlength="100">
+				<div class="char-count" id="count1">0 / 9</div>
+			</div>
+			<div class="editor-section">
+				<label>2行目（日本語9文字まで）</label>
+				<input type="text" id="line2Input" placeholder="例: 渋滞中" maxlength="100">
+				<div class="char-count" id="count2">0 / 9</div>
+			</div>
+			<div class="editor-section">
+				<label>選択文字の色</label>
+				<div style="display: flex; gap: 8px; align-items: center;">
+					<input type="color" id="textColorPicker" value="#ffffff">
+					<button id="applyColorBtn">選択範囲に適用</button>
+				</div>
+			</div>
+			<label class="check-row">
+				<input type="checkbox" id="centerCheck">
+				アイコン時に文字を中央揃え
+			</label>
+			<label class="check-row">
+				<input type="checkbox" id="yellowCheck">
+				ランプを点滅する (黄)
+			</label>
+			<label class="check-row">
+				<input type="checkbox" id="redCheck">
+				ランプを点滅する (赤)
+			</label>
+			<!-- <div class="editor-section">
+				<label>生成コード</label>
+				<div class="code-box" id="codeOutput"></div>
+			</div> -->
+		</div>
+
+		<script>
+			const iconPaths = {
+				none: "",
+				break: "data/img/info/break.svg",
+				clash: "data/img/info/clash.svg",
+				closed: "data/img/info/closed.svg",
+				construction: "data/img/info/construction.svg",
+				delay: "data/img/info/delay.svg",
+				luggage: "data/img/info/luggage.svg",
+				rain: "data/img/info/rain.svg",
+				snow: "data/img/info/snow.svg",
+				tire: "data/img/info/tire.svg",
+				wave: "data/img/info/wave.svg",
+				wind: "data/img/info/wind.svg",
+				work: "data/img/info/work.svg",
+				michimaru: "data/img/info/michimaru.svg",
+				nexco_c: "data/img/info/nexco-c.svg"
+			};
+
+			let selectedIcon = "none";
+
+			const stack = document.getElementById("imageStack");
+			const iconImg = document.getElementById("iconImg");
+			const line1Display = document.getElementById("line1Display");
+			const line2Display = document.getElementById("line2Display");
+			const line1Input = document.getElementById("line1Input");
+			const line2Input = document.getElementById("line2Input");
+			const centerCheck = document.getElementById("centerCheck");
+			const yellowCheck = document.getElementById("yellowCheck");
+			const redCheck = document.getElementById("redCheck");
+			const yellowLamp = document.querySelector(".foreground");
+			const redLamp = document.querySelector(".foreground2");
+			const count1El = document.getElementById("count1");
+			const count2El = document.getElementById("count2");
+			const codeOutput = document.getElementById("codeOutput");
+			const textColorPicker = document.getElementById("textColorPicker");
+			const applyColorBtn = document.getElementById("applyColorBtn");
+
+			applyColorBtn.addEventListener("click",() => {
+				const { input,start,end } = savedSelection;
+				if(!input) return;
+				if(input !== line1Input && input !== line2Input) return;
+
+				const text = input.value;
+				const selected = text.substring(start,end);
+				if(!selected) return;
+
+				const color = textColorPicker.value;
+				const tagged = `[color=${color}]${selected}[/color]`;
+
+				input.value = text.substring(0,start) + tagged + text.substring(end);
+				input.focus();
+				input.selectionStart = input.selectionEnd = start + tagged.length;
+
+				update();
+			});
+
+			yellowCheck.addEventListener("change",() => {
+				yellowLamp.style.visibility = yellowCheck.checked ? "visible" : "hidden";
+			});
+
+			redCheck.addEventListener("change",() => {
+				redLamp.style.visibility = redCheck.checked ? "visible" : "hidden";
+			});
+
+			function countChars(str) {
+				let count = 0;
+				for (const ch of str) {
+					count += ch.charCodeAt(0) > 127 ? 1 : 0.5;
+				}
+				return Math.ceil(count);
+			}
+
+			function resizeText() {
+				const width = stack.clientWidth;
+				const baseFontSize = width * 0.1;
+				const hasIcon = selectedIcon !== "none";
+				const isCenter = hasIcon && centerCheck.checked;
+				const maxWidth = (hasIcon ? width * 0.68 : width) - 40;
+
+				[line1Display,line2Display].forEach((el) => {
+					el.style.fontSize = baseFontSize + "px";
+					el.style.transform = "scaleX(1)";
+
+					if(isCenter) {
+						el.style.textAlign = "center";
+						el.style.justifySelf = "center";
+						el.style.marginLeft = "25%";
+					} else if(hasIcon) {
+						el.style.textAlign = "left";
+						el.style.justifySelf = "start";
+						el.style.marginLeft = "32%";
+					} else {
+						el.style.textAlign = "center";
+						el.style.justifySelf = "center";
+						el.style.marginLeft = "";
+					}
+
+					if(el.scrollWidth > maxWidth && maxWidth > 0) {
+						const ratio = maxWidth / el.scrollWidth;
+						const newFontSize = baseFontSize * ratio;
+						el.style.fontSize = newFontSize + "px";
+						
+						const baseMargin = el === line1Display ? width * 0.045 * 1.1 : width * 0.25;
+						const delta = baseFontSize - newFontSize;
+						el.style.marginTop = (baseMargin + delta / 2) + "px";
+					} else {
+						el.style.marginTop = "";
+					}
+				});
+			}
+
+			function parseColorTags(text) {
+				return text.replace(/\[color=(#[0-9a-fA-F]{6}|[a-z]+)\](.*?)\[\/color\]/g,(_,color,content) => `<span style="color:${color}">${content}</span>`);
+			}
+
+			function updateCode() {
+				// const l1 = line1Display.innerHTML;
+				// const l2 = line2Display.innerHTML;
+				// const icon = selectedIcon;
+				// const hasIcon = icon !== "none";
+				// const isCenter = hasIcon && centerCheck.checked;
+
+				// let html = `<div class="image-stack">\n`;
+				// html += `\t<img src="data/img/C2-info-1.svg" alt="背景" class="background">\n`;
+				// html += yellowCheck.checked ? `\t<img src="data/img/C2-info-2.svg" alt="前景" class="foreground">\n` : "";
+				// html += redCheck.checked ? `\t<img src="data/img/C2-info-3.svg" alt="前景" class="foreground2">\n` : "";
+				// if(hasIcon) {
+				// 	html += `\t<img src="${iconPaths[icon]}" class="icon-overlay">\n`;
+				// }
+
+				// if(isCenter) {
+				// 	html += `\t<div class="text-overlay center">${l1}</div>\n`;
+				// 	html += `\t<div class="text-overlay-2 center">${l2}</div>\n`;
+				// } else {
+				// 	html += `\t<div class="text-overlay">${l1}</div>\n`;
+				// 	html += `\t<div class="text-overlay-2">${l2}</div>\n`;
+				// }
+
+				// html += `</div>`;
+
+				// codeOutput.textContent = html;
+			}
+
+			function update() {
+				const l1 = line1Input.value;
+				const l2 = line2Input.value;
+				const hasIcon = selectedIcon !== "none";
+
+				line1Display.innerHTML = parseColorTags(l1) || "&nbsp;";
+				line2Display.innerHTML = parseColorTags(l2) || "&nbsp;";
+
+				const text1 = line1Display.textContent;
+				const text2 = line2Display.textContent;
+				const c1 = countChars(text1);
+				const c2 = countChars(text2);
+				count1El.textContent = `${c1} / 9`;
+				count1El.className = "char-count" + (c1 > 9 ? " over" : "");
+				count2El.textContent = `${c2} / 9`;
+				count2El.className = "char-count" + (c2 > 9 ? " over" : "");
+
+				if(hasIcon) {
+					iconImg.src = `../${iconPaths[selectedIcon]}`;
+					iconImg.style.display = "";
+				} else {
+					iconImg.style.display = "none";
+				}
+
+				resizeText();
+				updateCode();
+			}
+
+			let savedSelection = {
+				input: null,
+				start: 0,
+				end: 0
+			};
+			document.addEventListener("selectionchange",() => {
+				const active = document.activeElement;
+				if(active !== line1Input && active !== line2Input) return;
+
+				if(active.selectionStart !== active.selectionEnd) {
+					savedSelection = {
+						input: active,
+						start: active.selectionStart,
+						end: active.selectionEnd
+					};
+				}
+			});
+			line1Input.addEventListener("input",update);
+			line2Input.addEventListener("input",update);
+			centerCheck.addEventListener("change",update);
+			yellowCheck.addEventListener("change",update);
+
+			document.getElementById("iconGrid").addEventListener("click",(e) => {
+				const btn = e.target.closest(".icon-btn");
+				if(!btn) return;
+				document.querySelectorAll(".icon-btn").forEach((b) => b.classList.remove("selected"));
+				btn.classList.add("selected");
+				selectedIcon = btn.dataset.icon;
+				update();
+			});
+
+			line1Display.addEventListener("input",updateCode);
+			line2Display.addEventListener("input",updateCode);
+			window.addEventListener("resize",resizeText);
+
+			update();
+		</script>
+	</body>
+</html>
